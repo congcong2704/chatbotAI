@@ -1,3 +1,4 @@
+# main.py
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import google.generativeai as genai
@@ -22,39 +23,48 @@ if not GEMINI_API_KEY:
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-1.5-flash")
 
-# ===== Load dữ liệu crawl từ watv.org =====
-with open("watv_articles.json", "r", encoding="utf-8") as f:
+# ===== Load dữ liệu WATV =====
+with open("watv_all_sentences_vi.json", "r", encoding="utf-8") as f:
     articles = json.load(f)
 
 def search_articles(query: str, max_len=2000):
     """
     Tìm nội dung liên quan trong articles dựa vào từ khóa.
     """
+    results = []
     for art in articles:
         if query.lower() in art["content"].lower():
-            return art["content"][:max_len]
-    return ""
+            results.append(art["content"])
+    if not results:
+        # fallback: trả về toàn bộ nội dung nếu không tìm thấy match
+        results = [art["content"] for art in articles[:5]]
+    combined = "\n\n".join(results)
+    return combined[:max_len]
 
 @app.post("/api/message")
 async def message(req: Request):
     data = await req.json()
-    user = data.get("username")
-    msg = data.get("message")
+    user_msg = data.get("message", "").strip()
+    if not user_msg:
+        return {"reply": "Xin hãy nhập câu hỏi."}
 
-    # Tìm nội dung liên quan từ file JSON
-    context = search_articles(msg)
+    # Tìm nội dung liên quan
+    context = search_articles(user_msg)
 
-    if not context:
-        return {"reply": "Xin lỗi, tôi chưa tìm thấy nội dung liên quan trong dữ liệu WATV."}
+    prompt = f"""
+Bạn là trợ lý AI, trả lời người dùng hoàn toàn dựa trên nội dung WATV.org.
+
+Người dùng hỏi: "{user_msg}"
+
+Dữ liệu liên quan từ WATV.org:
+{context}
+
+- Nếu dữ liệu không phải tiếng Việt, hãy dịch sang tiếng Việt trước khi trả lời.
+- Hãy trả lời ngắn gọn, rõ ràng, dễ hiểu.
+- KHÔNG thêm ý kiến cá nhân, chỉ dùng thông tin trong dữ liệu.
+"""
 
     try:
-        prompt = f"""
-        Người dùng hỏi: "{msg}"
-        Đây là tài liệu từ WATV.org:
-        {context}
-        
-        Hãy trả lời ngắn gọn, rõ ràng dựa trên tài liệu WATV.
-        """
         response = model.generate_content(prompt)
         reply = response.text
     except Exception as e:
