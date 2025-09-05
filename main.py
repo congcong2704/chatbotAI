@@ -33,13 +33,14 @@ def search_articles(query: str, max_len=2000):
     """
     results = []
     for art in articles:
-        if query.lower() in art["content"].lower():
-            results.append(art["content"])
+        if query.lower() in art["sentence"].lower():  # dùng 'sentence' thay vì 'content'
+            results.append(art["sentence"])
     if not results:
-        # fallback: trả về toàn bộ nội dung nếu không tìm thấy match
-        results = [art["content"] for art in articles[:5]]
+        # fallback: trả về một số câu đầu nếu không tìm thấy match
+        results = [art["sentence"] for art in articles[:5]]
     combined = "\n\n".join(results)
     return combined[:max_len]
+
 
 @app.post("/api/message")
 async def message(req: Request):
