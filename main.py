@@ -1,55 +1,63 @@
-
-
-
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from groq import Groq
-import json
-import datetime
-import re
-import unicodedata
+import google.generativeai as genai
+import os, json
 
 app = FastAPI()
 
-# Cho phép frontend (index.html) gọi API
+# ===== CORS =====
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Cho phép tất cả frontend
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Tạo client cho Groq (dùng key thật của bạn)
-client = Groq(api_key="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")
+# ===== Gemini API =====
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if not GEMINI_API_KEY:
+    raise ValueError("⚠️ Chưa cấu hình GEMINI_API_KEY trong environment variables!")
 
-# Hàm loại bỏ dấu tiếng Việt
-def remove_accents(input_str: str) -> str:
-    nfkd_form = unicodedata.normalize("NFKD", input_str)
-    return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel("gemini-1.5-flash")
 
-@app.post("/chat")
-async def chat(request: Request):
+# ===== Load dữ liệu crawl từ watv.org =====
+with open("watv_articles.json", "r", encoding="utf-8") as f:
+    articles = json.load(f)
+
+def search_articles(query: str, max_len=2000):
+    """
+    Tìm nội dung liên quan trong articles dựa vào từ khóa.
+    """
+    for art in articles:
+        if query.lower() in art["content"].lower():
+            return art["content"][:max_len]
+    return ""
+
+@app.post("/api/message")
+async def message(req: Request):
+    data = await req.json()
+    user = data.get("username")
+    msg = data.get("message")
+
+    # Tìm nội dung liên quan từ file JSON
+    context = search_articles(msg)
+
+    if not context:
+        return {"reply": "Xin lỗi, tôi chưa tìm thấy nội dung liên quan trong dữ liệu WATV."}
+
     try:
-        data = await request.json()
-        message = data.get("message", "")
-
-        # Xử lý bỏ dấu để chatbot hiểu tiếng Việt không dấu
-        clean_message = remove_accents(message)
-
-        completion = client.chat.completions.create(
-            model="llama3-8b-8192",
-            messages=[{"role": "user", "content": clean_message}]
-        )
-
-        reply = completion.choices[0].message.content
-        return {"reply": reply}
-
+        prompt = f"""
+        Người dùng hỏi: "{msg}"
+        Đây là tài liệu từ WATV.org:
+        {context}
+        
+        Hãy trả lời ngắn gọn, rõ ràng dựa trên tài liệu WATV.
+        """
+        response = model.generate_content(prompt)
+        reply = response.text
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        reply = f"Lỗi gọi Gemini API: {e}"
 
-# Route để mở file index.html
-@app.get("/")
-async def serve_index():
-    return FileResponse("index.html")
+    return {"reply": reply}
