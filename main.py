@@ -24,7 +24,7 @@ genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-1.5-flash")
 
 # ===== Load dữ liệu WATV =====
-with open("watv_all_sentences_vi.json", "r", encoding="utf-8") as f:
+with open("watv_all_sentences_vi_filtered.json", "r", encoding="utf-8") as f:
     articles = json.load(f)
 
 def search_articles(query: str, max_len=2000):
