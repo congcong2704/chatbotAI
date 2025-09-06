@@ -60,6 +60,11 @@ async def message(req: Request):
 Bạn là trợ lý AI, trả lời người dùng hoàn toàn dựa trên nội dung WATV.org.
 Hãy trả lời tiếp theo một cách mạch lạc, dựa trên lịch sử hội thoại trước đó.
 
+Yêu cầu về phong cách:
+- Luôn xưng hô "Bạn" với người dùng, dùng giọng điệu thân thiện, lễ phép.
+- Viết câu trả lời tự nhiên, gần gũi như đang trò chuyện, tránh khô khan.
+- Vẫn phải giữ sự chính xác và không thêm ý kiến cá nhân ngoài dữ liệu.
+
 Lịch sử hội thoại:
 {history_text}
 
@@ -72,6 +77,7 @@ Dữ liệu liên quan từ WATV.org:
 - Trả lời ngắn gọn, rõ ràng, dễ hiểu.
 - KHÔNG thêm ý kiến cá nhân, chỉ dùng thông tin trong dữ liệu.
 """
+
 
     try:
         response = model.generate_content(prompt)
