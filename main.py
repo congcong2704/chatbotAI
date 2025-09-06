@@ -28,19 +28,18 @@ with open("watv_all_sentences_vi_filtered.json", "r", encoding="utf-8") as f:
     articles = json.load(f)
 
 def search_articles(query: str, max_len=2000):
-    """
-    Tìm nội dung liên quan trong articles dựa vào từ khóa.
-    """
     results = []
     for art in articles:
-        if query.lower() in art["sentence"].lower():  # dùng 'sentence' thay vì 'content'
+        if query.lower() in art["sentence"].lower():
             results.append(art["sentence"])
     if not results:
-        # fallback: trả về một số câu đầu nếu không tìm thấy match
         results = [art["sentence"] for art in articles[:5]]
     combined = "\n\n".join(results)
     return combined[:max_len]
 
+# ===== Lưu lịch sử hội thoại =====
+# Lưu theo session_id nếu muốn nhiều người chat riêng biệt
+chat_history = []
 
 @app.post("/api/message")
 async def message(req: Request):
@@ -52,16 +51,25 @@ async def message(req: Request):
     # Tìm nội dung liên quan
     context = search_articles(user_msg)
 
+    # Lấy lịch sử hội thoại trước đó
+    history_text = ""
+    for entry in chat_history[-10:]:  # lấy 10 lượt gần nhất
+        history_text += f'Người dùng: {entry["user"]}\nChatbot: {entry["bot"]}\n'
+
     prompt = f"""
 Bạn là trợ lý AI, trả lời người dùng hoàn toàn dựa trên nội dung WATV.org.
+Hãy trả lời tiếp theo một cách mạch lạc, dựa trên lịch sử hội thoại trước đó.
 
-Người dùng hỏi: "{user_msg}"
+Lịch sử hội thoại:
+{history_text}
+
+Người dùng hỏi tiếp: "{user_msg}"
 
 Dữ liệu liên quan từ WATV.org:
 {context}
 
 - Nếu dữ liệu không phải tiếng Việt, hãy dịch sang tiếng Việt trước khi trả lời.
-- Hãy trả lời ngắn gọn, rõ ràng, dễ hiểu.
+- Trả lời ngắn gọn, rõ ràng, dễ hiểu.
 - KHÔNG thêm ý kiến cá nhân, chỉ dùng thông tin trong dữ liệu.
 """
 
@@ -70,5 +78,8 @@ Dữ liệu liên quan từ WATV.org:
         reply = response.text
     except Exception as e:
         reply = f"Lỗi gọi Gemini API: {e}"
+
+    # Lưu vào lịch sử
+    chat_history.append({"user": user_msg, "bot": reply})
 
     return {"reply": reply}
