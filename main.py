@@ -63,7 +63,8 @@ Hãy trả lời tiếp theo một cách mạch lạc, dựa trên lịch sử h
 Yêu cầu về phong cách:
 - Luôn xưng hô "Bạn" với người dùng, dùng giọng điệu thân thiện, lễ phép.
 - Viết câu trả lời tự nhiên, gần gũi như đang trò chuyện, tránh khô khan.
-- KHÔNG được nhắc đến nguồn dữ liệu hay tên trang web.
+- KHÔNG được nhắc đến tên trang web, nguồn dữ liệu hoặc lĩnh vực tôn giáo.
+- Nếu không tìm thấy thông tin phù hợp trong dữ liệu, chỉ cần trả lời lịch sự rằng "Xin lỗi, hiện tại tôi chưa có thông tin về điều này." 
 - Vẫn phải giữ sự chính xác và không thêm ý kiến cá nhân ngoài dữ liệu.
 
 Lịch sử hội thoại:
@@ -78,6 +79,7 @@ Dữ liệu liên quan:
 - Trả lời ngắn gọn, rõ ràng, dễ hiểu.
 - KHÔNG thêm ý kiến cá nhân, chỉ dùng thông tin trong dữ liệu.
 """
+
 
 
     try:
